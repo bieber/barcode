@@ -26,7 +26,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 package barcode
@@ -34,8 +33,8 @@ package barcode
 import (
 	"image"
 	"image/draw"
-	"unsafe"
 	"runtime"
+	"unsafe"
 )
 
 // #include <stdlib.h>
@@ -60,7 +59,6 @@ func NewImage(src image.Image) *Image {
 		src:       image.NewGray(src.Bounds()),
 		zbarImage: C.zbar_image_create(),
 	}
-
 
 	dims := newImage.src.Bounds().Size()
 	C.zbar_image_set_size(newImage.zbarImage, C.uint(dims.X), C.uint(dims.Y))
@@ -92,16 +90,4 @@ func NewImage(src image.Image) *Image {
 	)
 
 	return newImage
-}
-
-func (i *Image) GrabACode() string {
-	scanner := C.zbar_image_scanner_create()
-	C.zbar_image_scanner_set_config(scanner, 0, C.ZBAR_CFG_ENABLE, 1)
-
-	C.zbar_scan_image(scanner, i.zbarImage)
-
-
-	symbol := C.zbar_image_first_symbol(i.zbarImage)
-	return C.GoString(C.zbar_symbol_get_data(symbol))
-
 }

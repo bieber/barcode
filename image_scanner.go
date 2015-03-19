@@ -32,6 +32,7 @@
 package barcode
 
 import (
+	"errors"
 	"runtime"
 )
 
@@ -60,6 +61,38 @@ func NewScanner() *ImageScanner {
 	)
 
 	return scanner
+}
+
+// ScanImage scans an Image and returns a slice of all Symbols found,
+// or nil and an error if an error is encountered.
+func (s *ImageScanner) ScanImage(img *Image) ([]*Symbol, error) {
+	resultCode := C.zbar_scan_image(s.zbarScanner, img.zbarImage)
+
+	if resultCode == 0 {
+		return []*Symbol{}, nil
+	} else if resultCode < 0 {
+		return nil, errors.New("zbar: Error scanning image")
+	}
+
+	getFirst := func() *C.zbar_symbol_t {
+		return C.zbar_image_first_symbol(img.zbarImage)
+	}
+	getNext := func(symbol *C.zbar_symbol_t) *C.zbar_symbol_t {
+		return C.zbar_symbol_next(symbol)
+	}
+
+	symbols := []*Symbol{}
+	for s := getFirst(); s != nil; s = getNext(s) {
+		symbols = append(
+			symbols,
+			&Symbol{
+				Type: SymbolType(C.zbar_symbol_get_type(s)),
+				Data: C.GoString(C.zbar_symbol_get_data(s)),
+			},
+		)
+	}
+
+	return symbols, nil
 }
 
 // SetEnabledAll turns the ImageScanner on or off for all symbologies.

@@ -63,3 +63,9 @@ func (s SymbolType) Name() string {
 func (s SymbolType) toEnum() C.zbar_symbol_type_t {
 	return C.zbar_symbol_type_t(s)
 }
+
+// Symbol represents a scanned barcode.
+type Symbol struct {
+	Type SymbolType
+	Data string
+}
