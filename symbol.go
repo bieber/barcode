@@ -31,6 +31,10 @@
 
 package barcode
 
+import (
+	"image"
+)
+
 // #include <zbar.h>
 import "C"
 
@@ -68,4 +72,14 @@ func (s SymbolType) toEnum() C.zbar_symbol_type_t {
 type Symbol struct {
 	Type SymbolType
 	Data string
+
+	// Quality is an unscaled, relative quantity which expresses the
+	// confidence of the match.  These values are currently meaningful
+	// only in relation to each other: a larger value is more
+	// confident than a smaller one.
+	Quality int
+
+	// Boundary is a set of image.Point which define a polygon
+	// containing the scanned symbol in the image.
+	Boundary []image.Point
 }

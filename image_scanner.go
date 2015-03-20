@@ -33,6 +33,7 @@ package barcode
 
 import (
 	"errors"
+	"image"
 	"runtime"
 )
 
@@ -83,13 +84,24 @@ func (s *ImageScanner) ScanImage(img *Image) ([]*Symbol, error) {
 
 	symbols := []*Symbol{}
 	for s := getFirst(); s != nil; s = getNext(s) {
-		symbols = append(
-			symbols,
-			&Symbol{
-				Type: SymbolType(C.zbar_symbol_get_type(s)),
-				Data: C.GoString(C.zbar_symbol_get_data(s)),
-			},
-		)
+		newSym := Symbol{
+			Type:     SymbolType(C.zbar_symbol_get_type(s)),
+			Data:     C.GoString(C.zbar_symbol_get_data(s)),
+			Quality:  int(C.zbar_symbol_get_quality(s)),
+			Boundary: []image.Point{},
+		}
+
+		for i := 0; i < int(C.zbar_symbol_get_loc_size(s)); i++ {
+			newSym.Boundary = append(
+				newSym.Boundary,
+				image.Pt(
+					int(C.zbar_symbol_get_loc_x(s, C.uint(i))),
+					int(C.zbar_symbol_get_loc_y(s, C.uint(i))),
+				),
+			)
+		}
+
+		symbols = append(symbols, &newSym)
 	}
 
 	return symbols, nil
