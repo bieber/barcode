@@ -72,6 +72,8 @@ func (s *ImageScanner) ScanImage(img *Image) ([]*Symbol, error) {
 	if resultCode == 0 {
 		return []*Symbol{}, nil
 	} else if resultCode < 0 {
+		// There doesn't seem to be an error code function for the
+		// image scanner type
 		return nil, errors.New("zbar: Error scanning image")
 	}
 
