@@ -45,7 +45,7 @@ import "C"
 // or all symbologies first) and then use it to scan an Image for
 // barcodes.
 type ImageScanner struct {
-	zbarScanner *C.zbar_scanner_t
+	zbarScanner *C.zbar_image_scanner_t
 }
 
 // NewScanner creates a new ImageScanner and returns a pointer to it.
