@@ -119,7 +119,8 @@ func (s *ImageScanner) ScanMat(img *gocv.Mat) (symbols []*Symbol, err error) {
 	gocv.CvtColor(*img, &imgBW, gocv.ColorBGRToGray)
 
 	zbarImage := C.zbar_image_create()
-	C.zbar_image_set_size(zbarImage, C.uint(640), C.uint(480))
+	dims := img.Size()
+	C.zbar_image_set_size(zbarImage, C.uint(dims[1]), C.uint(dims[0]))
 	C.zbar_image_set_format(zbarImage, C.ulong(y800))
 	C.zbar_image_set_data(
 		zbarImage,
