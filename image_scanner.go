@@ -35,6 +35,9 @@ import (
 	"errors"
 	"image"
 	"runtime"
+	"unsafe"
+
+	"gocv.io/x/gocv"
 )
 
 // #include <zbar.h>
@@ -107,6 +110,58 @@ func (s *ImageScanner) ScanImage(img *Image) ([]*Symbol, error) {
 	}
 
 	return symbols, nil
+}
+
+// ScanMat scans an gocv.Mat avoiding the costly conversion and returns a slice
+// of all Symbols found, or nil and an error if an error is encountered.
+func (s *ImageScanner) ScanMat(img *gocv.Mat) (symbols []*Symbol, err error) {
+	imgBW := gocv.NewMat()
+	gocv.CvtColor(*img, &imgBW, gocv.ColorBGRToGray)
+
+	zbarImage := C.zbar_image_create()
+	dims := img.Size()
+	C.zbar_image_set_size(zbarImage, C.uint(dims[1]), C.uint(dims[0]))
+	C.zbar_image_set_format(zbarImage, C.ulong(y800))
+	C.zbar_image_set_data(
+		zbarImage,
+		unsafe.Pointer(&imgBW.ToBytes()[0]),
+		C.ulong(len(imgBW.ToBytes())),
+		nil,
+	)
+	imgBW.Close()
+
+	resultCode := C.zbar_scan_image(s.zbarScanner, zbarImage)
+	if resultCode > 0 {
+		for s := C.zbar_image_first_symbol(zbarImage); s != nil; s = C.zbar_symbol_next(s) {
+			newSym := Symbol{
+				Type:     SymbolType(C.zbar_symbol_get_type(s)),
+				Data:     C.GoString(C.zbar_symbol_get_data(s)),
+				Quality:  int(C.zbar_symbol_get_quality(s)),
+				Boundary: []image.Point{},
+			}
+
+			for i := 0; i < int(C.zbar_symbol_get_loc_size(s)); i++ {
+				newSym.Boundary = append(
+					newSym.Boundary,
+					image.Pt(
+						int(C.zbar_symbol_get_loc_x(s, C.uint(i))),
+						int(C.zbar_symbol_get_loc_y(s, C.uint(i))),
+					),
+				)
+			}
+
+			symbols = append(symbols, &newSym)
+		}
+	} else if resultCode < 0 {
+		// There doesn't seem to be an error code function for the
+		// image scanner type
+		err = errors.New("zbar: Error scanning image")
+	}
+
+	C.zbar_image_set_data(zbarImage, nil, 0, nil)
+	C.zbar_image_destroy(zbarImage)
+
+	return symbols, err
 }
 
 // SetEnabledAll turns the ImageScanner on or off for all symbologies.
