@@ -116,7 +116,21 @@ func (s *ImageScanner) ScanImage(img *Image) ([]*Symbol, error) {
 // of all Symbols found, or nil and an error if an error is encountered.
 func (s *ImageScanner) ScanMat(img *gocv.Mat) (symbols []*Symbol, err error) {
 	imgBW := gocv.NewMat()
-	gocv.CvtColor(*img, &imgBW, gocv.ColorBGRToGray)
+	defer imgBW.Close()
+
+	imgType := img.Type()
+	if imgType == gocv.MatTypeCV8UC1 {
+		img.CopyTo(&imgBW)
+	} else if imgType == gocv.MatTypeCV8UC3 {
+		gocv.CvtColor(*img, &imgBW, gocv.ColorBGRToGray)
+	} else {
+		return nil, errors.New("only MatTypeCV8UC1 and MatTypeCV8UC3 is supported")
+	}
+
+	imgBwDataPtr, err := imgBW.DataPtrUint8()
+	if err != nil {
+		return nil, err
+	}
 
 	zbarImage := C.zbar_image_create()
 	dims := img.Size()
@@ -124,11 +138,10 @@ func (s *ImageScanner) ScanMat(img *gocv.Mat) (symbols []*Symbol, err error) {
 	C.zbar_image_set_format(zbarImage, C.ulong(y800))
 	C.zbar_image_set_data(
 		zbarImage,
-		unsafe.Pointer(&imgBW.ToBytes()[0]),
-		C.ulong(len(imgBW.ToBytes())),
+		unsafe.Pointer(&imgBwDataPtr[0]),
+		C.ulong(len(imgBwDataPtr)),
 		nil,
 	)
-	imgBW.Close()
 
 	resultCode := C.zbar_scan_image(s.zbarScanner, zbarImage)
 	if resultCode > 0 {
