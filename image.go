@@ -84,7 +84,7 @@ func NewImage(src image.Image) *Image {
 		func(i *Image) {
 			// The image data was allocated by the Go runtime, we
 			// don't want zbar trying to free it
-			C.zbar_image_set_data(newImage.zbarImage, nil, 0, nil)
+			C.zbar_image_set_data(i.zbarImage, nil, 0, nil)
 			C.zbar_image_destroy(i.zbarImage)
 		},
 	)
